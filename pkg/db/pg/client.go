@@ -15,7 +15,6 @@ type pgClient struct {
 // New creates DB client object.
 func New(ctx context.Context, dsn string) (db.Client, error) {
 	dbc, err := pgxpool.New(ctx, dsn)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to db: %v", err)
 	}

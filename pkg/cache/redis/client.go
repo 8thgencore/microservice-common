@@ -38,7 +38,6 @@ func (c *redisClient) Set(ctx context.Context, key string, value interface{}) er
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -54,7 +53,6 @@ func (c *redisClient) HSet(ctx context.Context, key string, values interface{}) 
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -72,7 +70,6 @@ func (c *redisClient) Get(ctx context.Context, key string) (interface{}, error) 
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +87,6 @@ func (c *redisClient) HGetAll(ctx context.Context, key string) ([]interface{}, e
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +102,6 @@ func (c *redisClient) Expire(ctx context.Context, key string, expiration time.Du
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -122,7 +117,6 @@ func (c *redisClient) Ping(ctx context.Context) error {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
