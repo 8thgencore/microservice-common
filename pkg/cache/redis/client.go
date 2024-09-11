@@ -20,6 +20,7 @@ func NewClient(opt *redis.Options) *cacheClient {
 	return &cacheClient{rdb: rdb}
 }
 
+// String commands
 func (c *cacheClient) Set(ctx context.Context, key string, value interface{}) error {
 	if err := c.rdb.Set(ctx, key, value, 0).Err(); err != nil {
 		logger.Error("unable to set key in the cache", zap.String("key", key))
@@ -34,15 +35,6 @@ func (c *cacheClient) SetEx(ctx context.Context, key string, value interface{}, 
 		return err
 	}
 	return nil
-}
-
-func (c *cacheClient) TTL(ctx context.Context, key string) (time.Duration, error) {
-	expiresAt, err := c.rdb.TTL(ctx, key).Result()
-	if err != nil {
-		logger.Error("unable to ttl key in the cache", zap.String("key", key))
-		return expiresAt, err
-	}
-	return expiresAt, nil
 }
 
 func (c *cacheClient) Get(ctx context.Context, key string) (string, error) {
@@ -92,7 +84,24 @@ func (c *cacheClient) Decr(ctx context.Context, key string) error {
 	return nil
 }
 
-func (c *cacheClient) ExpiresAt(ctx context.Context, key string, tm time.Time) error {
+func (c *cacheClient) TTL(ctx context.Context, key string) (time.Duration, error) {
+	expiresAt, err := c.rdb.TTL(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to ttl key in the cache", zap.String("key", key))
+		return expiresAt, err
+	}
+	return expiresAt, nil
+}
+
+func (c *cacheClient) Expire(ctx context.Context, key string, duration time.Duration) error {
+	if err := c.rdb.Expire(ctx, key, duration).Err(); err != nil {
+		logger.Error("unable to expire key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) ExpireAt(ctx context.Context, key string, tm time.Time) error {
 	if err := c.rdb.ExpireAt(ctx, key, tm).Err(); err != nil {
 		logger.Error("unable to expire key in the cache", zap.String("key", key))
 		return err
@@ -100,6 +109,7 @@ func (c *cacheClient) ExpiresAt(ctx context.Context, key string, tm time.Time) e
 	return nil
 }
 
+// Hash commands
 func (c *cacheClient) HSet(ctx context.Context, key, field string, value interface{}) error {
 	if err := c.rdb.HSet(ctx, key, field, value).Err(); err != nil {
 		logger.Error("unable to set field in the hash", zap.String("key", key), zap.String("field", field))
@@ -134,6 +144,7 @@ func (c *cacheClient) HIncrBy(ctx context.Context, key, field string, incr int64
 	return nil
 }
 
+// List commands
 func (c *cacheClient) LPush(ctx context.Context, key string, value interface{}) error {
 	if err := c.rdb.LPush(ctx, key, value).Err(); err != nil {
 		logger.Error("unable to lpush key in the cache", zap.String("key", key))
@@ -146,23 +157,6 @@ func (c *cacheClient) LPushAll(ctx context.Context, key string, values ...interf
 	val, err := c.rdb.LPush(ctx, key, values...).Result()
 	if err != nil {
 		logger.Error("unable to LPushAll key in the cache", zap.String("key", key))
-		return 0, err
-	}
-	return val, nil
-}
-
-func (c *cacheClient) LTrim(ctx context.Context, key string, start, stop int64) error {
-	if err := c.rdb.LTrim(ctx, key, start, stop).Err(); err != nil {
-		logger.Error("unable to ltrim key in the cache", zap.String("key", key))
-		return err
-	}
-	return nil
-}
-
-func (c *cacheClient) LLen(ctx context.Context, key string) (int64, error) {
-	val, err := c.rdb.LLen(ctx, key).Result()
-	if err != nil {
-		logger.Error("unable to llen key in the cache", zap.String("key", key))
 		return 0, err
 	}
 	return val, nil
@@ -192,14 +186,89 @@ func (c *cacheClient) RPop(ctx context.Context, key string) (string, error) {
 	return val, nil
 }
 
-func (c *cacheClient) Expire(ctx context.Context, key string, duration time.Duration) error {
-	if err := c.rdb.Expire(ctx, key, duration).Err(); err != nil {
-		logger.Error("unable to expire key in the cache", zap.String("key", key))
+func (c *cacheClient) LTrim(ctx context.Context, key string, start, stop int64) error {
+	if err := c.rdb.LTrim(ctx, key, start, stop).Err(); err != nil {
+		logger.Error("unable to ltrim key in the cache", zap.String("key", key))
 		return err
 	}
 	return nil
 }
 
+func (c *cacheClient) LLen(ctx context.Context, key string) (int64, error) {
+	val, err := c.rdb.LLen(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to llen key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) LRange(ctx context.Context, key string) ([]string, error) {
+	val, err := c.rdb.LRange(ctx, key, 0, -1).Result()
+	if err != nil {
+		logger.Error("unable to lrange key in the cache", zap.String("key", key))
+		return nil, err
+	}
+	return val, nil
+}
+
+// Set commands
+
+func (c *cacheClient) SAdd(ctx context.Context, key string, value interface{}) (int64, error) {
+	val, err := c.rdb.SAdd(ctx, key, value).Result()
+	if err != nil {
+		logger.Error("unable to sadd key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SAddAll(ctx context.Context, key string, values ...interface{}) (int64, error) {
+	val, err := c.rdb.SAdd(ctx, key, values...).Result()
+	if err != nil {
+		logger.Error("unable to saddAll key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SRem(ctx context.Context, key string, value interface{}) (int64, error) {
+	val, err := c.rdb.SRem(ctx, key, value).Result()
+	if err != nil {
+		logger.Error("unable to SRem key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SCard(ctx context.Context, key string) (int64, error) {
+	val, err := c.rdb.SCard(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to scard key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SIsMember(ctx context.Context, key string, value interface{}) (bool, error) {
+	val, err := c.rdb.SIsMember(ctx, key, value).Result()
+	if err != nil {
+		logger.Error("unable to SIsMember key in the cache", zap.String("key", key))
+		return false, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SMembers(ctx context.Context, key string) ([]string, error) {
+	values, err := c.rdb.SMembers(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to SMembers key in the cache", zap.String("key", key))
+		return nil, err
+	}
+	return values, nil
+}
+
+// Sorted Set commands
 func (c *cacheClient) ZAdd(ctx context.Context, key string, value interface{}) error {
 	if err := c.rdb.ZAdd(ctx, key, redis.Z{
 		Score:  float64(time.Now().UnixMilli()),
@@ -262,65 +331,11 @@ func (c *cacheClient) ZRange(ctx context.Context, key string) ([]string, error) 
 	return val, nil
 }
 
-func (c *cacheClient) LRange(ctx context.Context, key string) ([]string, error) {
-	val, err := c.rdb.LRange(ctx, key, 0, -1).Result()
-	if err != nil {
-		logger.Error("unable to lrange key in the cache", zap.String("key", key))
-		return nil, err
+// Connection management
+func (c *cacheClient) Ping(ctx context.Context) error {
+	if err := c.rdb.Ping(ctx).Err(); err != nil {
+		logger.Error("unable to ping redis", zap.Error(err))
+		return err
 	}
-	return val, nil
-}
-
-func (c *cacheClient) SAdd(ctx context.Context, key string, value interface{}) (int64, error) {
-	val, err := c.rdb.SAdd(ctx, key, value).Result()
-	if err != nil {
-		logger.Error("unable to sadd key in the cache", zap.String("key", key))
-		return 0, err
-	}
-	return val, nil
-}
-
-func (c *cacheClient) SAddAll(ctx context.Context, key string, values ...interface{}) (int64, error) {
-	val, err := c.rdb.SAdd(ctx, key, values...).Result()
-	if err != nil {
-		logger.Error("unable to saddAll key in the cache", zap.String("key", key))
-		return 0, err
-	}
-	return val, nil
-}
-
-func (c *cacheClient) SRem(ctx context.Context, key string, value interface{}) (int64, error) {
-	val, err := c.rdb.SRem(ctx, key, value).Result()
-	if err != nil {
-		logger.Error("unable to SRem key in the cache", zap.String("key", key))
-		return 0, err
-	}
-	return val, nil
-}
-
-func (c *cacheClient) SCard(ctx context.Context, key string) (int64, error) {
-	val, err := c.rdb.SCard(ctx, key).Result()
-	if err != nil {
-		logger.Error("unable to scard key in the cache", zap.String("key", key))
-		return 0, err
-	}
-	return val, nil
-}
-
-func (c *cacheClient) SIsMember(ctx context.Context, key string, value interface{}) (bool, error) {
-	val, err := c.rdb.SIsMember(ctx, key, value).Result()
-	if err != nil {
-		logger.Error("unable to SIsMember key in the cache", zap.String("key", key))
-		return false, err
-	}
-	return val, nil
-}
-
-func (c *cacheClient) SMembers(ctx context.Context, key string) ([]string, error) {
-	values, err := c.rdb.SMembers(ctx, key).Result()
-	if err != nil {
-		logger.Error("unable to SMembers key in the cache", zap.String("key", key))
-		return nil, err
-	}
-	return values, nil
+	return nil
 }
