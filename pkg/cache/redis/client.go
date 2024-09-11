@@ -10,6 +10,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// ErrKeyNotFound is returned when a key is not found in a map or other data structure
+var ErrKeyNotFound = errors.New("key not found")
+
 type cacheClient struct {
 	rdb *redis.Client
 }
@@ -41,7 +44,7 @@ func (c *cacheClient) Get(ctx context.Context, key string) (string, error) {
 	val, err := c.rdb.Get(ctx, key).Result()
 	if err != nil {
 		if err.Error() == redis.Nil.Error() {
-			return "", errors.New("key not found")
+			return "", ErrKeyNotFound
 		}
 		logger.Error("unable to get key from the cache", zap.String("key", key))
 		return "", err
@@ -166,7 +169,7 @@ func (c *cacheClient) LPop(ctx context.Context, key string) (string, error) {
 	val, err := c.rdb.LPop(ctx, key).Result()
 	if err != nil {
 		if err.Error() == redis.Nil.Error() {
-			return "", errors.New("key not found")
+			return "", ErrKeyNotFound
 		}
 		logger.Error("unable to lpop key in the cache", zap.String("key", key))
 		return "", err
@@ -178,7 +181,7 @@ func (c *cacheClient) RPop(ctx context.Context, key string) (string, error) {
 	val, err := c.rdb.RPop(ctx, key).Result()
 	if err != nil {
 		if err.Error() == redis.Nil.Error() {
-			return "", errors.New("key not found")
+			return "", ErrKeyNotFound
 		}
 		logger.Error("unable to rpop key in the cache", zap.String("key", key))
 		return "", err
