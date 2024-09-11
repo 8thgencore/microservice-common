@@ -2,162 +2,325 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
-
-	"github.com/8thgencore/microservice-common/pkg/cache"
-	"github.com/8thgencore/microservice-common/pkg/closer"
 	"github.com/8thgencore/microservice-common/pkg/logger"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
-var _ cache.Client = (*redisClient)(nil)
-
-type handler func(ctx context.Context, conn redis.Conn) error
-
-type redisClient struct {
-	pool              *redis.Pool
-	connectionTimeout time.Duration
+type cacheClient struct {
+	rdb *redis.Client
 }
 
 // NewClient creates client for Redis communication.
-func NewClient(pool *redis.Pool, connectionTimeout time.Duration) *redisClient {
-	return &redisClient{
-		pool:              pool,
-		connectionTimeout: connectionTimeout,
-	}
+func NewClient(opt *redis.Options) *cacheClient {
+	rdb := redis.NewClient(opt)
+	return &cacheClient{rdb: rdb}
 }
 
-func (c *redisClient) Set(ctx context.Context, key string, value interface{}) error {
-	err := c.execute(ctx, func(_ context.Context, conn redis.Conn) error {
-		_, err := conn.Do("SET", redis.Args{key}.Add(value)...)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+func (c *cacheClient) Set(ctx context.Context, key string, value interface{}) error {
+	if err := c.rdb.Set(ctx, key, value, 0).Err(); err != nil {
+		logger.Error("unable to set key in the cache", zap.String("key", key))
 		return err
 	}
-
 	return nil
 }
 
-func (c *redisClient) HSet(ctx context.Context, key string, values interface{}) error {
-	err := c.execute(ctx, func(_ context.Context, conn redis.Conn) error {
-		_, err := conn.Do("HSET", redis.Args{key}.AddFlat(values)...)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+func (c *cacheClient) SetEx(ctx context.Context, key string, value interface{}, duration time.Duration) error {
+	if err := c.rdb.SetEx(ctx, key, value, duration).Err(); err != nil {
+		logger.Error("unable to set key in the cache", zap.String("key", key))
 		return err
 	}
-
 	return nil
 }
 
-func (c *redisClient) Get(ctx context.Context, key string) (interface{}, error) {
-	var value interface{}
-	err := c.execute(ctx, func(_ context.Context, conn redis.Conn) error {
-		var errEx error
-		value, errEx = conn.Do("GET", key)
-		if errEx != nil {
-			return errEx
-		}
-		return nil
-	})
+func (c *cacheClient) TTL(ctx context.Context, key string) (time.Duration, error) {
+	expiresAt, err := c.rdb.TTL(ctx, key).Result()
 	if err != nil {
-		return nil, err
+		logger.Error("unable to ttl key in the cache", zap.String("key", key))
+		return expiresAt, err
 	}
-
-	return value, nil
+	return expiresAt, nil
 }
 
-func (c *redisClient) HGetAll(ctx context.Context, key string) ([]interface{}, error) {
-	var values []interface{}
-	err := c.execute(ctx, func(_ context.Context, conn redis.Conn) error {
-		var errEx error
-		values, errEx = redis.Values(conn.Do("HGETALL", key))
-		if errEx != nil {
-			return errEx
-		}
-		return nil
-	})
+func (c *cacheClient) Get(ctx context.Context, key string) (string, error) {
+	val, err := c.rdb.Get(ctx, key).Result()
 	if err != nil {
+		if err.Error() == redis.Nil.Error() {
+			return "", errors.New("key not found")
+		}
+		logger.Error("unable to get key from the cache", zap.String("key", key))
+		return "", err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) Del(ctx context.Context, key string) error {
+	if _, err := c.rdb.Del(ctx, key).Result(); err != nil {
+		logger.Error("unable to del key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) DelAll(ctx context.Context, keys ...string) error {
+	if len(keys) == 0 {
+		return nil // No keys to delete
+	}
+	if _, err := c.rdb.Del(ctx, keys...).Result(); err != nil {
+		logger.Error("unable to DelAll keys in the cache")
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) Incr(ctx context.Context, key string) error {
+	if err := c.rdb.Incr(ctx, key).Err(); err != nil {
+		logger.Error("unable to incr key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) Decr(ctx context.Context, key string) error {
+	if err := c.rdb.Decr(ctx, key).Err(); err != nil {
+		logger.Error("unable to decr key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) ExpiresAt(ctx context.Context, key string, tm time.Time) error {
+	if err := c.rdb.ExpireAt(ctx, key, tm).Err(); err != nil {
+		logger.Error("unable to expire key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) HSet(ctx context.Context, key, field string, value interface{}) error {
+	if err := c.rdb.HSet(ctx, key, field, value).Err(); err != nil {
+		logger.Error("unable to set field in the hash", zap.String("key", key), zap.String("field", field))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) HGet(ctx context.Context, key, field string) (string, error) {
+	result, err := c.rdb.HGet(ctx, key, field).Result()
+	if err != nil {
+		logger.Error("unable to get field from the hash", zap.String("key", key), zap.String("field", field))
+		return "", err
+	}
+	return result, nil
+}
+
+func (c *cacheClient) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	result, err := c.rdb.HGetAll(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to get all fields from the hash", zap.String("key", key))
 		return nil, err
 	}
+	return result, nil
+}
 
+func (c *cacheClient) HIncrBy(ctx context.Context, key, field string, incr int64) error {
+	if _, err := c.rdb.HIncrBy(ctx, key, field, incr).Result(); err != nil {
+		logger.Error("unable to increment field in hash in the cache", zap.String("key", key), zap.String("field", field))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) LPush(ctx context.Context, key string, value interface{}) error {
+	if err := c.rdb.LPush(ctx, key, value).Err(); err != nil {
+		logger.Error("unable to lpush key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) LPushAll(ctx context.Context, key string, values ...interface{}) (int64, error) {
+	val, err := c.rdb.LPush(ctx, key, values...).Result()
+	if err != nil {
+		logger.Error("unable to LPushAll key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) LTrim(ctx context.Context, key string, start, stop int64) error {
+	if err := c.rdb.LTrim(ctx, key, start, stop).Err(); err != nil {
+		logger.Error("unable to ltrim key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) LLen(ctx context.Context, key string) (int64, error) {
+	val, err := c.rdb.LLen(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to llen key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) LPop(ctx context.Context, key string) (string, error) {
+	val, err := c.rdb.LPop(ctx, key).Result()
+	if err != nil {
+		if err.Error() == redis.Nil.Error() {
+			return "", errors.New("key not found")
+		}
+		logger.Error("unable to lpop key in the cache", zap.String("key", key))
+		return "", err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) RPop(ctx context.Context, key string) (string, error) {
+	val, err := c.rdb.RPop(ctx, key).Result()
+	if err != nil {
+		if err.Error() == redis.Nil.Error() {
+			return "", errors.New("key not found")
+		}
+		logger.Error("unable to rpop key in the cache", zap.String("key", key))
+		return "", err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) Expire(ctx context.Context, key string, duration time.Duration) error {
+	if err := c.rdb.Expire(ctx, key, duration).Err(); err != nil {
+		logger.Error("unable to expire key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) ZAdd(ctx context.Context, key string, value interface{}) error {
+	if err := c.rdb.ZAdd(ctx, key, redis.Z{
+		Score:  float64(time.Now().UnixMilli()),
+		Member: value,
+	}).Err(); err != nil {
+		logger.Error("unable to zadd key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) ZAddWithScore(ctx context.Context, key string, score float64, value interface{}) error {
+	if err := c.rdb.ZAdd(ctx, key, redis.Z{
+		Score:  score,
+		Member: value,
+	}).Err(); err != nil {
+		logger.Error("unable to ZAddWithScore key in the cache", zap.String("key", key))
+		return err
+	}
+	return nil
+}
+
+func (c *cacheClient) ZRem(ctx context.Context, key string, value interface{}) (int64, error) {
+	val, err := c.rdb.ZRem(ctx, key, value).Result()
+	if err != nil {
+		logger.Error("unable to ZRem key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) ZPopMin(ctx context.Context, key string, nb int64) ([]string, error) {
+	val, err := c.rdb.ZPopMin(ctx, key, nb).Result()
+	if err != nil {
+		logger.Error("unable to zpopmin key in the cache", zap.String("key", key))
+		return nil, err
+	}
+	var members []string
+	for _, member := range val {
+		members = append(members, member.Member.(string))
+	}
+	return members, nil
+}
+
+func (c *cacheClient) ZCount(ctx context.Context, key string) (int64, error) {
+	val, err := c.rdb.ZCount(ctx, key, "-inf", "+inf").Result()
+	if err != nil {
+		logger.Error("unable to zcount key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) ZRange(ctx context.Context, key string) ([]string, error) {
+	val, err := c.rdb.ZRange(ctx, key, 0, -1).Result()
+	if err != nil {
+		logger.Error("unable to zrange key in the cache", zap.String("key", key))
+		return nil, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) LRange(ctx context.Context, key string) ([]string, error) {
+	val, err := c.rdb.LRange(ctx, key, 0, -1).Result()
+	if err != nil {
+		logger.Error("unable to lrange key in the cache", zap.String("key", key))
+		return nil, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SAdd(ctx context.Context, key string, value interface{}) (int64, error) {
+	val, err := c.rdb.SAdd(ctx, key, value).Result()
+	if err != nil {
+		logger.Error("unable to sadd key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SAddAll(ctx context.Context, key string, values ...interface{}) (int64, error) {
+	val, err := c.rdb.SAdd(ctx, key, values...).Result()
+	if err != nil {
+		logger.Error("unable to saddAll key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SRem(ctx context.Context, key string, value interface{}) (int64, error) {
+	val, err := c.rdb.SRem(ctx, key, value).Result()
+	if err != nil {
+		logger.Error("unable to SRem key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SCard(ctx context.Context, key string) (int64, error) {
+	val, err := c.rdb.SCard(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to scard key in the cache", zap.String("key", key))
+		return 0, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SIsMember(ctx context.Context, key string, value interface{}) (bool, error) {
+	val, err := c.rdb.SIsMember(ctx, key, value).Result()
+	if err != nil {
+		logger.Error("unable to SIsMember key in the cache", zap.String("key", key))
+		return false, err
+	}
+	return val, nil
+}
+
+func (c *cacheClient) SMembers(ctx context.Context, key string) ([]string, error) {
+	values, err := c.rdb.SMembers(ctx, key).Result()
+	if err != nil {
+		logger.Error("unable to SMembers key in the cache", zap.String("key", key))
+		return nil, err
+	}
 	return values, nil
-}
-
-func (c *redisClient) Expire(ctx context.Context, key string, expiration time.Duration) error {
-	err := c.execute(ctx, func(_ context.Context, conn redis.Conn) error {
-		_, err := conn.Do("EXPIRE", key, int(expiration.Seconds()))
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *redisClient) Ping(ctx context.Context) error {
-	err := c.execute(ctx, func(_ context.Context, conn redis.Conn) error {
-		_, err := conn.Do("PING")
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *redisClient) execute(ctx context.Context, handler handler) error {
-	conn, err := c.getConnect(ctx)
-	if err != nil {
-		return err
-	}
-
-	closer.Add(func() error {
-		err = conn.Close()
-		if err != nil {
-			logger.Error("failed to close redis connection: ", zap.Error(err))
-		}
-		return nil
-	})
-
-	err = handler(ctx, conn)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *redisClient) getConnect(ctx context.Context) (redis.Conn, error) {
-	getConnTimeoutCtx, cancel := context.WithTimeout(ctx, c.connectionTimeout)
-	closer.Add(func() error {
-		cancel()
-		return nil
-	})
-
-	conn, err := c.pool.GetContext(getConnTimeoutCtx)
-	if err != nil {
-		_ = conn.Close()
-		return nil, errors.Errorf("failed to connect to redis: %v", err)
-	}
-
-	return conn, nil
 }
