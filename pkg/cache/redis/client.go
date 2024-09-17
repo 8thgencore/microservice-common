@@ -29,6 +29,7 @@ func (c *cacheClient) Set(ctx context.Context, key string, value interface{}) er
 		logger.Error("unable to set key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -37,6 +38,7 @@ func (c *cacheClient) SetEx(ctx context.Context, key string, value interface{}, 
 		logger.Error("unable to set key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -49,6 +51,7 @@ func (c *cacheClient) Get(ctx context.Context, key string) (string, error) {
 		logger.Error("unable to get key from the cache", zap.String("key", key))
 		return "", err
 	}
+
 	return val, nil
 }
 
@@ -57,6 +60,7 @@ func (c *cacheClient) Del(ctx context.Context, key string) error {
 		logger.Error("unable to del key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -68,6 +72,7 @@ func (c *cacheClient) DelAll(ctx context.Context, keys ...string) error {
 		logger.Error("unable to DelAll keys in the cache")
 		return err
 	}
+
 	return nil
 }
 
@@ -76,6 +81,7 @@ func (c *cacheClient) Incr(ctx context.Context, key string) error {
 		logger.Error("unable to incr key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -84,6 +90,7 @@ func (c *cacheClient) Decr(ctx context.Context, key string) error {
 		logger.Error("unable to decr key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -93,6 +100,7 @@ func (c *cacheClient) TTL(ctx context.Context, key string) (time.Duration, error
 		logger.Error("unable to ttl key in the cache", zap.String("key", key))
 		return expiresAt, err
 	}
+
 	return expiresAt, nil
 }
 
@@ -101,6 +109,7 @@ func (c *cacheClient) Expire(ctx context.Context, key string, duration time.Dura
 		logger.Error("unable to expire key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -109,6 +118,7 @@ func (c *cacheClient) ExpireAt(ctx context.Context, key string, tm time.Time) er
 		logger.Error("unable to expire key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -118,6 +128,7 @@ func (c *cacheClient) HSet(ctx context.Context, key, field string, value interfa
 		logger.Error("unable to set field in the hash", zap.String("key", key), zap.String("field", field))
 		return err
 	}
+
 	return nil
 }
 
@@ -127,6 +138,7 @@ func (c *cacheClient) HGet(ctx context.Context, key, field string) (string, erro
 		logger.Error("unable to get field from the hash", zap.String("key", key), zap.String("field", field))
 		return "", err
 	}
+
 	return result, nil
 }
 
@@ -136,6 +148,7 @@ func (c *cacheClient) HGetAll(ctx context.Context, key string) (map[string]strin
 		logger.Error("unable to get all fields from the hash", zap.String("key", key))
 		return nil, err
 	}
+
 	return result, nil
 }
 
@@ -144,6 +157,7 @@ func (c *cacheClient) HIncrBy(ctx context.Context, key, field string, incr int64
 		logger.Error("unable to increment field in hash in the cache", zap.String("key", key), zap.String("field", field))
 		return err
 	}
+
 	return nil
 }
 
@@ -153,6 +167,7 @@ func (c *cacheClient) LPush(ctx context.Context, key string, value interface{}) 
 		logger.Error("unable to lpush key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -162,6 +177,7 @@ func (c *cacheClient) LPushAll(ctx context.Context, key string, values ...interf
 		logger.Error("unable to LPushAll key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -174,6 +190,7 @@ func (c *cacheClient) LPop(ctx context.Context, key string) (string, error) {
 		logger.Error("unable to lpop key in the cache", zap.String("key", key))
 		return "", err
 	}
+
 	return val, nil
 }
 
@@ -186,6 +203,7 @@ func (c *cacheClient) RPop(ctx context.Context, key string) (string, error) {
 		logger.Error("unable to rpop key in the cache", zap.String("key", key))
 		return "", err
 	}
+
 	return val, nil
 }
 
@@ -194,6 +212,7 @@ func (c *cacheClient) LTrim(ctx context.Context, key string, start, stop int64) 
 		logger.Error("unable to ltrim key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -203,6 +222,7 @@ func (c *cacheClient) LLen(ctx context.Context, key string) (int64, error) {
 		logger.Error("unable to llen key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -212,6 +232,7 @@ func (c *cacheClient) LRange(ctx context.Context, key string) ([]string, error) 
 		logger.Error("unable to lrange key in the cache", zap.String("key", key))
 		return nil, err
 	}
+
 	return val, nil
 }
 
@@ -223,6 +244,7 @@ func (c *cacheClient) SAdd(ctx context.Context, key string, value interface{}) (
 		logger.Error("unable to sadd key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -232,6 +254,7 @@ func (c *cacheClient) SAddAll(ctx context.Context, key string, values ...interfa
 		logger.Error("unable to saddAll key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -241,6 +264,7 @@ func (c *cacheClient) SRem(ctx context.Context, key string, value interface{}) (
 		logger.Error("unable to SRem key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -250,6 +274,7 @@ func (c *cacheClient) SCard(ctx context.Context, key string) (int64, error) {
 		logger.Error("unable to scard key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -259,6 +284,7 @@ func (c *cacheClient) SIsMember(ctx context.Context, key string, value interface
 		logger.Error("unable to SIsMember key in the cache", zap.String("key", key))
 		return false, err
 	}
+
 	return val, nil
 }
 
@@ -268,6 +294,7 @@ func (c *cacheClient) SMembers(ctx context.Context, key string) ([]string, error
 		logger.Error("unable to SMembers key in the cache", zap.String("key", key))
 		return nil, err
 	}
+
 	return values, nil
 }
 
@@ -280,6 +307,7 @@ func (c *cacheClient) ZAdd(ctx context.Context, key string, value interface{}) e
 		logger.Error("unable to zadd key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -291,6 +319,7 @@ func (c *cacheClient) ZAddWithScore(ctx context.Context, key string, score float
 		logger.Error("unable to ZAddWithScore key in the cache", zap.String("key", key))
 		return err
 	}
+
 	return nil
 }
 
@@ -300,6 +329,7 @@ func (c *cacheClient) ZRem(ctx context.Context, key string, value interface{}) (
 		logger.Error("unable to ZRem key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -313,6 +343,7 @@ func (c *cacheClient) ZPopMin(ctx context.Context, key string, nb int64) ([]stri
 	for _, member := range val {
 		members = append(members, member.Member.(string))
 	}
+
 	return members, nil
 }
 
@@ -322,6 +353,7 @@ func (c *cacheClient) ZCount(ctx context.Context, key string) (int64, error) {
 		logger.Error("unable to zcount key in the cache", zap.String("key", key))
 		return 0, err
 	}
+
 	return val, nil
 }
 
@@ -331,6 +363,7 @@ func (c *cacheClient) ZRange(ctx context.Context, key string) ([]string, error) 
 		logger.Error("unable to zrange key in the cache", zap.String("key", key))
 		return nil, err
 	}
+
 	return val, nil
 }
 
@@ -340,5 +373,6 @@ func (c *cacheClient) Ping(ctx context.Context) error {
 		logger.Error("unable to ping redis", zap.Error(err))
 		return err
 	}
+
 	return nil
 }

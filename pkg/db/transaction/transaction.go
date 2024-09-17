@@ -67,5 +67,6 @@ func (m *manager) transaction(ctx context.Context, opts pgx.TxOptions, fn db.Han
 	if err = fn(ctx); err != nil {
 		err = fmt.Errorf("failed to execute transaction: %w", err)
 	}
+
 	return err
 }
