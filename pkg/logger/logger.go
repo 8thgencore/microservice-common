@@ -1,66 +1,51 @@
 package logger
 
 import (
+	"log/slog"
 	"os"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-var globalLogger *zap.Logger
+var globalLogger *slog.Logger
 
-// Init creates new Logger object.
+// Init создает новый объект Logger.
 func Init(env string) {
-	atomic := zap.NewAtomicLevel()
-
-	var enconfig zapcore.EncoderConfig
-	var enc zapcore.Encoder
+	var handler slog.Handler
 
 	switch env {
 	case "prod":
-		atomic.SetLevel(zapcore.InfoLevel)
-		enconfig = zap.NewProductionEncoderConfig()
-		enc = zapcore.NewJSONEncoder(enconfig)
-
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		})
 	default:
-		atomic.SetLevel(zapcore.DebugLevel)
-		enconfig = zap.NewDevelopmentEncoderConfig()
-		enc = zapcore.NewConsoleEncoder(enconfig)
+		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		})
 	}
 
-	globalLogger = zap.New(zapcore.NewCore(
-		enc,
-		zapcore.Lock(os.Stdout),
-		atomic,
-	))
+	globalLogger = slog.New(handler)
 }
 
-// Debug prints debug-level message.
-func Debug(msg string, fields ...zap.Field) {
-	globalLogger.Debug(msg, fields...)
+// Debug записывает сообщение уровня Debug.
+func Debug(msg string, args ...any) {
+	globalLogger.Debug(msg, args...)
 }
 
-// Info prints info-level message.
-func Info(msg string, fields ...zap.Field) {
-	globalLogger.Info(msg, fields...)
+// Info записывает сообщение уровня Info.
+func Info(msg string, args ...any) {
+	globalLogger.Info(msg, args...)
 }
 
-// Warn prints warning-level message.
-func Warn(msg string, fields ...zap.Field) {
-	globalLogger.Warn(msg, fields...)
+// Warn записывает сообщение уровня Warn.
+func Warn(msg string, args ...any) {
+	globalLogger.Warn(msg, args...)
 }
 
-// Error prints error-level message.
-func Error(msg string, fields ...zap.Field) {
-	globalLogger.Error(msg, fields...)
+// Error записывает сообщение уровня Error.
+func Error(msg string, args ...any) {
+	globalLogger.Error(msg, args...)
 }
 
-// Fatal prints fatal-level message.
-func Fatal(msg string, fields ...zap.Field) {
-	globalLogger.Fatal(msg, fields...)
-}
-
-// WithOptions clones the current Logger, applies the supplied Options, and returns the resulting Logger.
-func WithOptions(opts ...zap.Option) *zap.Logger {
-	return globalLogger.WithOptions(opts...)
+// With добавляет дополнительные атрибуты к логгеру.
+func With(args ...any) *slog.Logger {
+	return globalLogger.With(args...)
 }
