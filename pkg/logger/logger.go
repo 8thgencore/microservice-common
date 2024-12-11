@@ -7,7 +7,7 @@ import (
 
 var globalLogger *slog.Logger
 
-// Init создает новый объект Logger.
+// Init initializes a new Logger object.
 func Init(env string) {
 	var handler slog.Handler
 
@@ -25,27 +25,33 @@ func Init(env string) {
 	globalLogger = slog.New(handler)
 }
 
-// Debug записывает сообщение уровня Debug.
+// Debug logs a message at the Debug level.
 func Debug(msg string, args ...any) {
 	globalLogger.Debug(msg, args...)
 }
 
-// Info записывает сообщение уровня Info.
+// Info logs a message at the Info level.
 func Info(msg string, args ...any) {
 	globalLogger.Info(msg, args...)
 }
 
-// Warn записывает сообщение уровня Warn.
+// Warn logs a message at the Warn level.
 func Warn(msg string, args ...any) {
 	globalLogger.Warn(msg, args...)
 }
 
-// Error записывает сообщение уровня Error.
+// Error logs a message at the Error level.
 func Error(msg string, args ...any) {
 	globalLogger.Error(msg, args...)
 }
 
-// With добавляет дополнительные атрибуты к логгеру.
+// Fatal logs a message at the Error level and exits the program.
+func Fatal(msg string, args ...any) {
+	globalLogger.Error(msg, args...)
+	os.Exit(1)
+}
+
+// With adds additional attributes to the logger.
 func With(args ...any) *slog.Logger {
 	return globalLogger.With(args...)
 }
