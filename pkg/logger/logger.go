@@ -14,11 +14,13 @@ func Init(env string) {
 	switch env {
 	case "prod":
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
+			Level:     slog.LevelInfo,
+			AddSource: true,
 		})
 	default:
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
+			Level:     slog.LevelDebug,
+			AddSource: true,
 		})
 	}
 
