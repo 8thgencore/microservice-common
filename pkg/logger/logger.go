@@ -3,57 +3,78 @@ package logger
 import (
 	"log/slog"
 	"os"
+	"runtime"
 )
 
-var globalLogger *slog.Logger
+var logger *slog.Logger
 
 // Init initializes a new Logger object.
 func Init(env string) {
 	var handler slog.Handler
 
-	switch env {
-	case "prod":
-		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level:     slog.LevelInfo,
-			AddSource: true,
-		})
-	default:
-		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level:     slog.LevelDebug,
-			AddSource: true,
-		})
+	var opts = &slog.HandlerOptions{
+		AddSource: true,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				pc, f, l, _ := runtime.Caller(7)
+				a.Value = slog.GroupValue(
+					slog.Attr{
+						Key:   "file",
+						Value: slog.StringValue(f),
+					},
+					slog.Attr{
+						Key:   "line",
+						Value: slog.IntValue(l),
+					},
+					slog.Attr{
+						Key:   "function",
+						Value: slog.StringValue(runtime.FuncForPC(pc).Name()),
+					},
+				)
+			}
+			return a
+		},
 	}
 
-	globalLogger = slog.New(handler)
+	switch env {
+	case "prod":
+		opts.Level = slog.LevelInfo
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	default:
+		opts.Level = slog.LevelDebug
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
+
+	logger = slog.New(handler)
 }
 
 // Debug logs a message at the Debug level.
 func Debug(msg string, args ...any) {
-	globalLogger.Debug(msg, args...)
+	logger.Debug(msg, args...)
 }
 
 // Info logs a message at the Info level.
 func Info(msg string, args ...any) {
-	globalLogger.Info(msg, args...)
+	logger.Info(msg, args...)
 }
 
 // Warn logs a message at the Warn level.
 func Warn(msg string, args ...any) {
-	globalLogger.Warn(msg, args...)
+	logger.Warn(msg, args...)
 }
 
 // Error logs a message at the Error level.
 func Error(msg string, args ...any) {
-	globalLogger.Error(msg, args...)
+	logger.Error(msg, args...)
 }
 
 // Fatal logs a message at the Error level and exits the program.
 func Fatal(msg string, args ...any) {
-	globalLogger.Error(msg, args...)
+	logger.Error(msg, args...)
 	os.Exit(1)
 }
 
 // With adds additional attributes to the logger.
 func With(args ...any) *slog.Logger {
-	return globalLogger.With(args...)
+	return logger.With(args...)
 }
