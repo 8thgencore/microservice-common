@@ -2,7 +2,6 @@ package pg
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/8thgencore/microservice-common/pkg/db"
@@ -103,7 +102,7 @@ func LogQuery(ctx context.Context, q db.Query, args ...interface{}) {
 	prettyQuery := prettier.Pretty(q.QueryRaw, prettier.PlaceholderDollar, args...)
 	log.Println(
 		ctx,
-		fmt.Sprintf("sql: %s", q.Name),
-		fmt.Sprintf("query: %s", prettyQuery),
+		"sql: "+q.Name,
+		"query: "+prettyQuery,
 	)
 }
