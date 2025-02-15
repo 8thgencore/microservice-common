@@ -42,7 +42,7 @@ jobs:
       
       - uses: ./.github/actions/setup
         with:
-          go-version: '1.24'
+          go-version: ${{ matrix.go-version }}
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v4
