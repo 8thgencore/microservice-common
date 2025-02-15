@@ -15,7 +15,8 @@ import (
 type key string
 
 const (
-	TxKey key = "tx" // TxKey is used to add Tx to context.
+	// TxKey is the key used to add Tx to context.
+	TxKey key = "tx"
 )
 
 type pg struct {

@@ -7,8 +7,10 @@ import (
 )
 
 const (
-	PlaceholderDollar   = "$" // PlaceholderDollar for query arguments.
-	PlaceholderQuestion = "?" // PlaceholderQuestion for query arguments.
+	// PlaceholderDollar for query arguments.
+	PlaceholderDollar = "$"
+	// PlaceholderQuestion for query arguments.
+	PlaceholderQuestion = "?"
 )
 
 // Pretty makes human-readable query format.
